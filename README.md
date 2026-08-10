@@ -1,2 +1,1 @@
-# qa-evidence-generator-
-Gerador de evidências de teste: cola prints com Ctrl+V, carimba data/hora e exporta um relatório HTML autocontido — 100% offline, sem dependências.
+Aplicação single-file (HTML + CSS + JS vanilla, sem build, sem backend) para documentar execuções de teste manual. Permite cadastrar casos de teste, colar evidências via Ctrl+V com carimbo automático de data/hora, e gerar um documento final .html autocontido — pronto para anexar em ferramentas de gestão de testes ou compartilhar por e-mail/chat. Roda 100% no navegador, com autosave em localStorage.
