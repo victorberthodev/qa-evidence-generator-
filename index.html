@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gerador de Evidências de Testes</title>
+<style>
+/* ==================================================================
+   TOKENS VISUAIS
+   Paleta corporativa azul/branco. Fontes de sistema (sem CDN).
+   ================================================================== */
+:root{
+  --azul:#2C6FBB;
+  --azul-escuro:#22568F;
+  --azul-claro:#EAF2FB;
+  --azul-borda:#CFE0F4;
+  --branco:#FFFFFF;
+  --texto:#1F2A37;
+  --cinza:#4A4A4A;
+  --cinza-2:#6B7688;
+  --linha:#E3EAF3;
+  --fundo:#F7FAFD;
+
+  --passou-cor:#3F7F5E;   --passou-fundo:#E9F4EE;   --passou-borda:#BFE0CE;
+  --falhou-cor:#B4544E;   --falhou-fundo:#FBEDEC;   --falhou-borda:#EFC9C6;
+  --bloq-cor:#9C7621;     --bloq-fundo:#FBF4E4;     --bloq-borda:#EBDAB0;
+  --na-cor:#6C7789;       --na-fundo:#EFF2F6;       --na-borda:#D9E0E9;
+
+  --raio:10px;
+  --raio-p:6px;
+  --sombra:0 1px 2px rgba(16,42,73,.05), 0 6px 20px rgba(16,42,73,.06);
+  --sombra-forte:0 12px 40px rgba(16,42,73,.18);
+  --fonte:"Segoe UI", Inter, system-ui, -apple-system, Roboto, Arial, sans-serif;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--fonte);
+  background:var(--fundo);
+  color:var(--texto);
+  font-size:15px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+:focus-visible{outline:2px solid var(--azul);outline-offset:2px;border-radius:4px}
+
+/* ==================================================================
+   BARRA SUPERIOR
+   ================================================================== */
+.barra{
+  position:sticky;top:0;z-index:40;
+  background:var(--branco);
+  border-bottom:1px solid var(--linha);
+  box-shadow:0 1px 3px rgba(16,42,73,.05);
+}
+.barra-interna{
+  max-width:1120px;margin:0 auto;padding:12px 24px;
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+}
+.marca{display:flex;align-items:center;gap:10px;margin-right:auto}
+.marca-icone{
+  width:32px;height:32px;border-radius:8px;flex:0 0 auto;
+  background:var(--azul);color:#fff;
+  display:grid;place-items:center;font-size:16px;
+}
+.marca-texto strong{display:block;font-size:15px;font-weight:600;letter-spacing:-.01em}
+.marca-texto span{display:block;font-size:12px;color:var(--cinza-2)}
+
+.salvo{
+  font-size:12px;color:var(--cinza-2);display:flex;align-items:center;gap:6px;
+  white-space:nowrap;
+}
+.salvo .ponto{width:7px;height:7px;border-radius:50%;background:var(--passou-cor)}
+.salvo.alerta{color:var(--falhou-cor)}
+.salvo.alerta .ponto{background:var(--falhou-cor)}
+
+/* ==================================================================
+   BOTÕES
+   ================================================================== */
+.btn{
+  font-family:inherit;font-size:14px;font-weight:600;
+  border-radius:var(--raio-p);border:1px solid transparent;
+  padding:9px 16px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:7px;
+  transition:background .15s, border-color .15s, color .15s, box-shadow .15s;
+  white-space:nowrap;
+}
+.btn-primario{background:var(--azul);color:#fff}
+.btn-primario:hover{background:var(--azul-escuro)}
+.btn-secundario{background:var(--branco);color:var(--azul);border-color:var(--azul-borda)}
+.btn-secundario:hover{background:var(--azul-claro)}
+.btn-neutro{background:var(--branco);color:var(--cinza);border-color:var(--linha)}
+.btn-neutro:hover{background:#F1F4F8}
+.btn-perigo{background:var(--branco);color:var(--falhou-cor);border-color:var(--falhou-borda)}
+.btn-perigo:hover{background:var(--falhou-fundo)}
+.btn-pequeno{padding:6px 11px;font-size:13px}
+.btn-texto{
+  background:none;border:none;padding:0;cursor:pointer;
+  font-family:inherit;font-size:13px;color:var(--azul);text-decoration:underline;
+}
+.btn-texto:hover{color:var(--azul-escuro)}
+
+/* ==================================================================
+   LAYOUT PRINCIPAL
+   ================================================================== */
+.conteudo{max-width:1120px;margin:0 auto;padding:24px 24px 80px}
+.cartao{
+  background:var(--branco);
+  border:1px solid var(--linha);
+  border-radius:var(--raio);
+  box-shadow:var(--sombra);
+  margin-bottom:20px;
+}
+.cartao-cabecalho{
+  padding:16px 20px;border-bottom:1px solid var(--linha);
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  background:linear-gradient(180deg,#fff, #FCFDFF);
+  border-radius:var(--raio) var(--raio) 0 0;
+}
+.cartao-titulo{
+  margin:0;font-size:14px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--azul-escuro);display:flex;align-items:center;gap:9px;
+}
+.cartao-corpo{padding:20px}
+
+.grade{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+.col-3{grid-column:span 3}
+.col-4{grid-column:span 4}
+.col-6{grid-column:span 6}
+.col-12{grid-column:span 12}
+@media (max-width:900px){
+  .col-3,.col-4{grid-column:span 6}
+}
+@media (max-width:620px){
+  .col-3,.col-4,.col-6{grid-column:span 12}
+}
+
+/* ==================================================================
+   CAMPOS DE FORMULÁRIO
+   ================================================================== */
+.campo{display:flex;flex-direction:column;gap:6px;min-width:0}
+.campo label{
+  font-size:12.5px;font-weight:600;color:var(--cinza);
+  display:flex;align-items:center;gap:5px;
+}
+.obrigatorio{color:var(--falhou-cor);font-weight:700}
+.entrada, .selecao, .area{
+  font-family:inherit;font-size:14px;color:var(--texto);
+  background:var(--branco);
+  border:1px solid #D5DFEB;border-radius:var(--raio-p);
+  padding:9px 11px;width:100%;
+  transition:border-color .15s, box-shadow .15s;
+}
+.entrada:hover,.selecao:hover,.area:hover{border-color:#B9CBDF}
+.entrada:focus,.selecao:focus,.area:focus{
+  outline:none;border-color:var(--azul);box-shadow:0 0 0 3px rgba(44,111,187,.14);
+}
+.area{resize:vertical;min-height:70px;line-height:1.5}
+.selecao{appearance:none;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath fill='%236B7688' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 11px center;padding-right:30px;
+}
+.dica{font-size:11.5px;color:var(--cinza-2)}
+.campo.erro .entrada,.campo.erro .selecao{border-color:var(--falhou-cor);background:#FEF8F8}
+.mensagem-erro{display:none;font-size:12px;color:var(--falhou-cor);font-weight:600}
+.campo.erro .mensagem-erro{display:block}
+
+/* ==================================================================
+   BARRA DE CASOS + RESUMO AO VIVO
+   ================================================================== */
+.barra-casos{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  margin:28px 0 14px;
+}
+.barra-casos h2{
+  margin:0;font-size:14px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--azul-escuro);
+}
+.contadores{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.selo{
+  font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;
+  border:1px solid var(--na-borda);background:var(--na-fundo);color:var(--na-cor);
+  white-space:nowrap;
+}
+.selo-passou{background:var(--passou-fundo);border-color:var(--passou-borda);color:var(--passou-cor)}
+.selo-falhou{background:var(--falhou-fundo);border-color:var(--falhou-borda);color:var(--falhou-cor)}
+.selo-bloqueado{background:var(--bloq-fundo);border-color:var(--bloq-borda);color:var(--bloq-cor)}
+.selo-total{background:var(--azul-claro);border-color:var(--azul-borda);color:var(--azul-escuro)}
+
+/* ==================================================================
+   CARD DE CASO DE TESTE
+   ================================================================== */
+.caso{
+  background:var(--branco);
+  border:1px solid var(--linha);
+  border-left:4px solid var(--azul-borda);
+  border-radius:var(--raio);
+  box-shadow:var(--sombra);
+  margin-bottom:16px;
+}
+.caso[data-status="Passou"]{border-left-color:var(--passou-cor)}
+.caso[data-status="Falhou"]{border-left-color:var(--falhou-cor)}
+.caso[data-status="Bloqueado"]{border-left-color:var(--bloq-cor)}
+.caso[data-status="Não aplicável"]{border-left-color:var(--na-cor)}
+
+.caso-topo{
+  padding:14px 18px;border-bottom:1px solid var(--linha);
+  display:flex;align-items:center;gap:12px;
+}
+.caso-num{
+  font-size:12px;font-weight:700;color:var(--azul-escuro);
+  background:var(--azul-claro);border:1px solid var(--azul-borda);
+  padding:3px 9px;border-radius:20px;white-space:nowrap;
+}
+.caso-resumo{font-size:12.5px;color:var(--cinza-2);margin-left:auto;white-space:nowrap}
+.caso-corpo{padding:18px}
+
+/* ==================================================================
+   ZONA DE COLAGEM E EVIDÊNCIAS
+   ================================================================== */
+.zona{
+  border:2px dashed var(--azul-borda);
+  border-radius:var(--raio);
+  background:var(--azul-claro);
+  padding:22px 16px;text-align:center;cursor:pointer;
+  transition:border-color .15s, background .15s;
+}
+.zona:hover{border-color:var(--azul);background:#E2EDFA}
+.zona:focus{outline:none;border-color:var(--azul);border-style:solid;box-shadow:0 0 0 3px rgba(44,111,187,.16)}
+.zona.arrastando{border-color:var(--azul);border-style:solid;background:#DCE9F8}
+.zona-titulo{font-size:14px;font-weight:600;color:var(--azul-escuro);margin:0 0 3px}
+.zona-sub{font-size:12.5px;color:var(--cinza-2);margin:0}
+.zona-atalho{
+  display:inline-block;font-family:Consolas,"Courier New",monospace;font-size:12px;
+  background:var(--branco);border:1px solid var(--azul-borda);border-bottom-width:2px;
+  border-radius:4px;padding:1px 6px;margin:0 2px;color:var(--azul-escuro);
+}
+.linha-fallback{margin-top:8px;text-align:center}
+.arquivo-oculto{display:none}
+
+.evidencias{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:14px;margin-top:14px;
+}
+.evidencias:empty{display:none}
+.evidencia{
+  border:1px solid var(--linha);border-radius:var(--raio-p);
+  background:var(--branco);overflow:hidden;position:relative;
+}
+.evidencia-imagem{
+  position:relative;background:#F2F5F9;
+  display:block;line-height:0;cursor:zoom-in;
+}
+.evidencia-imagem img{width:100%;height:150px;object-fit:cover;display:block}
+.evidencia-selo{
+  position:absolute;right:6px;bottom:6px;
+  background:rgba(17,24,39,.78);color:#fff;font-size:10.5px;font-weight:600;
+  padding:2px 6px;border-radius:4px;line-height:1.4;
+  border:1px solid rgba(255,255,255,.3);
+}
+.evidencia-remover{
+  position:absolute;top:6px;right:6px;
+  width:24px;height:24px;border-radius:50%;
+  background:rgba(255,255,255,.94);border:1px solid var(--linha);
+  color:var(--falhou-cor);font-size:15px;font-weight:700;line-height:1;
+  cursor:pointer;display:grid;place-items:center;padding:0;
+  box-shadow:0 1px 4px rgba(0,0,0,.18);
+}
+.evidencia-remover:hover{background:var(--falhou-fundo);border-color:var(--falhou-borda)}
+.evidencia-legenda{
+  width:100%;border:none;border-top:1px solid var(--linha);
+  font-family:inherit;font-size:12.5px;color:var(--texto);
+  padding:8px 10px;background:var(--branco);
+}
+.evidencia-legenda:focus{outline:none;background:var(--azul-claro)}
+.marca-gif{
+  position:absolute;top:6px;left:6px;
+  background:var(--azul);color:#fff;font-size:10px;font-weight:700;
+  letter-spacing:.06em;padding:2px 6px;border-radius:4px;
+}
+
+/* Visualizador em tela cheia ao clicar na miniatura */
+.lupa{
+  position:fixed;inset:0;z-index:80;background:rgba(15,30,50,.86);
+  display:none;place-items:center;padding:32px;cursor:zoom-out;
+}
+.lupa.aberta{display:grid}
+.lupa img{max-width:100%;max-height:100%;border-radius:6px;box-shadow:var(--sombra-forte)}
+
+/* ==================================================================
+   MODAIS E AVISOS
+   ================================================================== */
+.sobreposicao{
+  position:fixed;inset:0;z-index:90;background:rgba(15,30,50,.5);
+  display:none;place-items:center;padding:24px;
+}
+.sobreposicao.aberta{display:grid}
+.modal{
+  background:var(--branco);border-radius:12px;box-shadow:var(--sombra-forte);
+  width:100%;max-width:480px;overflow:hidden;
+}
+.modal-topo{padding:20px 22px 0}
+.modal-topo h3{margin:0 0 6px;font-size:18px;font-weight:700;letter-spacing:-.01em}
+.modal-topo p{margin:0;font-size:13.5px;color:var(--cinza-2)}
+.modal-corpo{padding:18px 22px}
+.modal-rodape{
+  padding:14px 22px;background:#F8FAFD;border-top:1px solid var(--linha);
+  display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;
+}
+.exemplo{
+  font-family:Consolas,"Courier New",monospace;font-size:12px;color:var(--cinza-2);
+  background:var(--azul-claro);border:1px solid var(--azul-borda);
+  border-radius:var(--raio-p);padding:7px 10px;margin-top:8px;
+}
+
+#avisos{position:fixed;right:20px;bottom:20px;z-index:100;display:flex;flex-direction:column;gap:8px}
+.aviso{
+  background:var(--texto);color:#fff;font-size:13.5px;font-weight:500;
+  padding:11px 15px;border-radius:var(--raio-p);box-shadow:var(--sombra-forte);
+  max-width:380px;animation:entrar .18s ease-out;
+}
+.aviso.ok{background:var(--passou-cor)}
+.aviso.erro{background:var(--falhou-cor)}
+.aviso.atencao{background:var(--bloq-cor)}
+@keyframes entrar{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none !important;transition:none !important}
+}
+
+.rodape-app{
+  max-width:1120px;margin:0 auto;padding:0 24px 40px;
+  font-size:12px;color:var(--cinza-2);text-align:center;
+}
+.vazio{
+  border:1px dashed var(--azul-borda);border-radius:var(--raio);
+  padding:28px;text-align:center;color:var(--cinza-2);font-size:13.5px;
+  background:var(--branco);
+}
+
+/* Área usada apenas para o print/PDF: invisível na tela */
+#areaImpressao{display:none}
+
+@media print{
+  .barra, .conteudo, .rodape-app, #avisos, .sobreposicao, .lupa, .caso, .cartao{
+    display:none !important;
+  }
+  #areaImpressao{display:block !important}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ============ BARRA SUPERIOR ============ -->
+  <header class="barra">
+    <div class="barra-interna">
+      <div class="marca">
+        <div class="marca-icone" aria-hidden="true">✓</div>
+        <div class="marca-texto">
+          <strong>Gerador de Evidências de Testes</strong>
+          <span>Documentação de execução manual · offline</span>
+        </div>
+      </div>
+      <div class="salvo" id="indicadorSalvo" role="status" aria-live="polite">
+        <span class="ponto"></span><span id="textoSalvo">Pronto</span>
+      </div>
+      <button class="btn btn-neutro btn-pequeno" id="btnLimpar" type="button">Limpar tudo</button>
+      <button class="btn btn-secundario" id="btnPdf" type="button">Exportar como PDF</button>
+      <button class="btn btn-primario" id="btnGerar" type="button">Gerar documento</button>
+    </div>
+  </header>
+
+  <main class="conteudo">
+
+    <!-- ============ DADOS DA EXECUÇÃO ============ -->
+    <section class="cartao" id="secaoHeader">
+      <div class="cartao-cabecalho">
+        <h2 class="cartao-titulo">Dados da execução</h2>
+      </div>
+      <div class="cartao-corpo">
+        <div class="grade">
+
+          <div class="campo col-6" data-campo-wrap="titulo">
+            <label for="fTitulo">Título do documento <span class="obrigatorio">*</span></label>
+            <input class="entrada" id="fTitulo" data-campo="titulo" type="text"
+                   placeholder="Ex.: Evidências — Regressão de cadastro de proposta">
+            <span class="mensagem-erro">Informe o título do documento.</span>
+          </div>
+
+          <div class="campo col-3" data-campo-wrap="executor">
+            <label for="fExecutor">Nome do executor <span class="obrigatorio">*</span></label>
+            <input class="entrada" id="fExecutor" data-campo="executor" type="text" placeholder="Ex.: Victor Bertho">
+            <span class="mensagem-erro">Informe quem executou os testes.</span>
+          </div>
+
+          <div class="campo col-3" data-campo-wrap="versaoTag">
+            <label for="fVersao">Versão / Tag testada <span class="obrigatorio">*</span></label>
+            <input class="entrada" id="fVersao" data-campo="versaoTag" type="text" placeholder="Ex.: v2.3.1">
+            <span class="mensagem-erro">A versão/tag é obrigatória para gerar o documento.</span>
+          </div>
+
+          <div class="campo col-3">
+            <label for="fStatusGeral">Status geral da execução</label>
+            <select class="selecao" id="fStatusGeral" data-campo="statusGeral">
+              <option value="">— Não informado —</option>
+              <option value="Aprovado">✅ Aprovado</option>
+              <option value="Reprovado">❌ Reprovado</option>
+              <option value="Parcial">⚠️ Parcial</option>
+            </select>
+          </div>
+
+          <div class="campo col-3">
+            <label for="fAmbiente">Ambiente testado</label>
+            <select class="selecao" id="fAmbiente" data-campo="ambiente">
+              <option value="">— Não informado —</option>
+              <option value="Dev">Dev</option>
+              <option value="Homologação">Homologação</option>
+              <option value="Produção">Produção</option>
+            </select>
+          </div>
+
+          <div class="campo col-3">
+            <label for="fInicio">Início da execução</label>
+            <input class="entrada" id="fInicio" data-campo="dataInicio" type="datetime-local">
+          </div>
+
+          <div class="campo col-3">
+            <label for="fFim">Fim da execução</label>
+            <input class="entrada" id="fFim" data-campo="dataFim" type="datetime-local">
+          </div>
+
+          <div class="campo col-4">
+            <label for="fTicket">Ticket / Task vinculado</label>
+            <input class="entrada" id="fTicket" data-campo="ticket" type="text" placeholder="Ex.: JIRA-1234">
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CASOS DE TESTE ============ -->
+    <div class="barra-casos">
+      <h2>Casos de teste</h2>
+      <button class="btn btn-secundario btn-pequeno" id="btnAddCaso" type="button">+ Adicionar caso de teste</button>
+      <div class="contadores" id="contadores"></div>
+    </div>
+
+    <div id="listaCasos"></div>
+
+    <div class="vazio" id="listaVazia" hidden>
+      Nenhum caso de teste ainda. Clique em <strong>“+ Adicionar caso de teste”</strong> para começar.
+    </div>
+
+  </main>
+
+  <footer class="rodape-app">
+    Os dados ficam somente neste navegador (localStorage). Nada é enviado para servidores.
+  </footer>
+</div>
+
+<!-- ============ MODAL: RESTAURAR SESSÃO ============ -->
+<div class="sobreposicao" id="modalRestaurar" role="dialog" aria-modal="true" aria-labelledby="tituloRestaurar">
+  <div class="modal">
+    <div class="modal-topo">
+      <h3 id="tituloRestaurar">Restaurar sessão anterior?</h3>
+      <p>Encontramos um documento em andamento salvo neste navegador.</p>
+    </div>
+    <div class="modal-corpo">
+      <div class="exemplo" id="detalheSessao"></div>
+    </div>
+    <div class="modal-rodape">
+      <button class="btn btn-neutro" id="btnNovoDoc" type="button">Começar novo documento</button>
+      <button class="btn btn-primario" id="btnRestaurar" type="button">Restaurar sessão</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: NOME DO ARQUIVO ============ -->
+<div class="sobreposicao" id="modalExportar" role="dialog" aria-modal="true" aria-labelledby="tituloExportar">
+  <div class="modal">
+    <div class="modal-topo">
+      <h3 id="tituloExportar">Gerar documento final</h3>
+      <p>O arquivo é autocontido: abre em qualquer computador, sem depender de nada externo.</p>
+    </div>
+    <div class="modal-corpo">
+      <div class="campo">
+        <label for="fNomeArquivo">Nome do arquivo</label>
+        <input class="entrada" id="fNomeArquivo" type="text" spellcheck="false">
+        <div class="exemplo">Exemplo: evidencias_v2.3.1_2025-10-28.html</div>
+      </div>
+    </div>
+    <div class="modal-rodape">
+      <button class="btn btn-neutro" data-fechar-modal="modalExportar" type="button">Cancelar</button>
+      <button class="btn btn-primario" id="btnConfirmarExport" type="button">Baixar documento</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: CONFIRMAÇÃO GENÉRICA ============ -->
+<div class="sobreposicao" id="modalConfirmar" role="dialog" aria-modal="true" aria-labelledby="tituloConfirmar">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-topo">
+      <h3 id="tituloConfirmar">Confirmar</h3>
+      <p id="textoConfirmar"></p>
+    </div>
+    <div class="modal-rodape">
+      <button class="btn btn-neutro" data-fechar-modal="modalConfirmar" type="button">Cancelar</button>
+      <button class="btn btn-perigo" id="btnConfirmarAcao" type="button">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Visualizador de evidência em tamanho real -->
+<div class="lupa" id="lupa"><img id="lupaImg" alt="Evidência ampliada"></div>
+
+<!-- Avisos discretos (toasts) -->
+<div id="avisos" aria-live="polite"></div>
+
+<!-- Canvas oculto usado para carimbar as imagens -->
+<canvas id="canvasCarimbo" width="1" height="1" style="display:none"></canvas>
+
+<!-- Área renderizada apenas na impressão (Ctrl+P / Exportar como PDF) -->
+<div id="areaImpressao"></div>
+
+<script>
+
+"use strict";
+
+/* ==================================================================
+   ESTADO E PERSISTÊNCIA
+   Um único objeto de estado governa tudo. O DOM é sempre um reflexo
+   dele — nunca a fonte da verdade.
+   ================================================================== */
+
+const CHAVE = "qa_evidence_generator_v1";
+const LARGURA_MAXIMA = 1600;   // redimensiona prints gigantes antes de carimbar
+const LIMITE_PNG = 1400000;    // acima disso, cai para JPEG para não estourar o localStorage
+
+const estado = {
+  header: {
+    titulo: "", executor: "", versaoTag: "",
+    statusGeral: "", ambiente: "", dataInicio: "", dataFim: "", ticket: ""
+  },
+  casos: []
+};
+
+let autosaveAtivo = true;   // vira false se o localStorage estourar a cota
+let jaAvisouCota = false;   // evita repetir o mesmo alerta a cada gravação
+let temporizadorSalvar = null;
+
+/** Agenda a gravação no localStorage com debounce de 1s (evita gravar a cada tecla). */
+function agendarSalvamento() {
+  clearTimeout(temporizadorSalvar);
+  temporizadorSalvar = setTimeout(salvarEstado, 1000);
+}
+
+/**
+ * Grava o estado completo (inclusive as imagens em base64) no localStorage.
+ * Se a cota do navegador estourar, o autosave é desligado e o usuário é avisado
+ * de forma visível — perder evidência em silêncio seria o pior desfecho possível.
+ */
+function salvarEstado() {
+  try {
+    localStorage.setItem(CHAVE, JSON.stringify({ salvoEm: new Date().toISOString(), dados: estado }));
+    autosaveAtivo = true;
+    jaAvisouCota = false;
+    marcarSalvo("Salvo às " + horaCurta(new Date()));
+  } catch (e) {
+    autosaveAtivo = false;
+    marcarSalvo("Autosave pausado — memória do navegador cheia", true);
+    if (!jaAvisouCota) {
+      jaAvisouCota = true;
+      avisar("O navegador ficou sem espaço para o autosave. Gere o documento agora para não perder as evidências.", "erro", 9000);
+    }
+  }
+}
+
+/** Lê a sessão anterior, se existir. Retorna null quando não há nada válido. */
+function lerSessaoSalva() {
+  try {
+    const bruto = localStorage.getItem(CHAVE);
+    if (!bruto) return null;
+    const pacote = JSON.parse(bruto);
+    if (!pacote || !pacote.dados || !Array.isArray(pacote.dados.casos)) return null;
+    return pacote;
+  } catch (e) {
+    return null;
+  }
+}
+
+function limparSessao() {
+  try { localStorage.removeItem(CHAVE); } catch (e) { /* nada a fazer */ }
+}
+
+function marcarSalvo(texto, alerta) {
+  document.getElementById("textoSalvo").textContent = texto;
+  document.getElementById("indicadorSalvo").classList.toggle("alerta", !!alerta);
+}
+
+/* ==================================================================
+   UTILITÁRIOS
+   ================================================================== */
+
+function id() {
+  return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+}
+
+function doisDigitos(n) { return String(n).padStart(2, "0"); }
+
+/** Formata para o carimbo e para o relatório: 28/10/2025 14:32:07 */
+function dataHoraCompleta(d) {
+  return doisDigitos(d.getDate()) + "/" + doisDigitos(d.getMonth() + 1) + "/" + d.getFullYear() +
+         " " + doisDigitos(d.getHours()) + ":" + doisDigitos(d.getMinutes()) + ":" + doisDigitos(d.getSeconds());
+}
+
+function horaCurta(d) {
+  return doisDigitos(d.getHours()) + ":" + doisDigitos(d.getMinutes()) + ":" + doisDigitos(d.getSeconds());
+}
+
+/** Converte o valor de um input datetime-local (2025-10-28T14:32) para 28/10/2025 14:32 */
+function formatarDataLocal(valor) {
+  if (!valor) return "";
+  const p = valor.split("T");
+  if (p.length !== 2) return valor;
+  const d = p[0].split("-");
+  if (d.length !== 3) return valor;
+  return d[2] + "/" + d[1] + "/" + d[0] + " " + p[1].slice(0, 5);
+}
+
+function esc(texto) {
+  return String(texto == null ? "" : texto)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+/** Quebra de linha do usuário vira <br> no relatório final. */
+function escMultilinha(texto) {
+  return esc(texto).replace(/\r?\n/g, "<br>");
+}
+
+function avisar(mensagem, tipo, duracao) {
+  const caixa = document.createElement("div");
+  caixa.className = "aviso" + (tipo ? " " + tipo : "");
+  caixa.textContent = mensagem;
+  document.getElementById("avisos").appendChild(caixa);
+  setTimeout(function () { caixa.remove(); }, duracao || 4000);
+}
+
+function abrirModal(idModal) { document.getElementById(idModal).classList.add("aberta"); }
+function fecharModal(idModal) { document.getElementById(idModal).classList.remove("aberta"); }
+
+/** Confirmação com modal próprio (o confirm() nativo é bloqueado em alguns contextos). */
+let acaoConfirmada = null;
+function confirmar(texto, rotulo, aoConfirmar) {
+  document.getElementById("textoConfirmar").textContent = texto;
+  document.getElementById("btnConfirmarAcao").textContent = rotulo;
+  acaoConfirmada = aoConfirmar;
+  abrirModal("modalConfirmar");
+}
+
+function acharCaso(casoId) {
+  for (let i = 0; i < estado.casos.length; i++) {
+    if (estado.casos[i].id === casoId) return estado.casos[i];
+  }
+  return null;
+}
+
+/* ==================================================================
+   HEADER DO DOCUMENTO
+   ================================================================== */
+
+const secaoHeader = document.getElementById("secaoHeader");
+
+secaoHeader.addEventListener("input", tratarCampoHeader);
+secaoHeader.addEventListener("change", tratarCampoHeader);
+
+function tratarCampoHeader(evento) {
+  const alvo = evento.target;
+  const campo = alvo.getAttribute("data-campo");
+  if (!campo) return;
+  estado.header[campo] = alvo.value;
+  const envolucro = alvo.closest(".campo");
+  if (envolucro) envolucro.classList.remove("erro");
+  agendarSalvamento();
+}
+
+function preencherHeaderNaTela() {
+  const campos = secaoHeader.querySelectorAll("[data-campo]");
+  for (let i = 0; i < campos.length; i++) {
+    const nome = campos[i].getAttribute("data-campo");
+    campos[i].value = estado.header[nome] || "";
+    const inv = campos[i].closest(".campo");
+    if (inv) inv.classList.remove("erro");
+  }
+}
+
+/* ==================================================================
+   CASOS DE TESTE — RENDERIZAÇÃO
+   Cada card é criado uma única vez e mantido no DOM. Nada de
+   re-renderizar a lista inteira a cada tecla (perderia o foco do campo).
+   ================================================================== */
+
+const listaCasos = document.getElementById("listaCasos");
+const listaVazia = document.getElementById("listaVazia");
+const OPCOES_STATUS = ["Passou", "Falhou", "Bloqueado", "Não aplicável"];
+
+function novoCaso() {
+  return { id: id(), nome: "", status: "", observacao: "", evidencias: [] };
+}
+
+function adicionarCaso(dados, focar) {
+  const caso = dados || novoCaso();
+  estado.casos.push(caso);
+  listaCasos.appendChild(criarCardCaso(caso));
+  atualizarPainel();
+  agendarSalvamento();
+  if (focar) {
+    const campo = listaCasos.querySelector('[data-id="' + caso.id + '"] [data-papel="nome"]');
+    if (campo) { campo.focus(); campo.scrollIntoView({ block: "center", behavior: "smooth" }); }
+  }
+  return caso;
+}
+
+function removerCaso(casoId) {
+  if (zonaAtiva === casoId) zonaAtiva = null;
+  estado.casos = estado.casos.filter(function (c) { return c.id !== casoId; });
+  const card = listaCasos.querySelector('[data-id="' + casoId + '"]');
+  if (card) card.remove();
+  atualizarPainel();
+  agendarSalvamento();
+}
+
+/** Monta o card completo de um caso de teste e liga todos os seus eventos. */
+function criarCardCaso(caso) {
+  const card = document.createElement("div");
+  card.className = "caso";
+  card.setAttribute("data-id", caso.id);
+  card.setAttribute("data-status", caso.status || "");
+
+  const idNome = "nome-" + caso.id;
+  const idStatus = "status-" + caso.id;
+  const idObs = "obs-" + caso.id;
+
+  let opcoes = '<option value="">— Não informado —</option>';
+  OPCOES_STATUS.forEach(function (opcao) {
+    opcoes += '<option value="' + opcao + '"' + (caso.status === opcao ? " selected" : "") + ">" + opcao + "</option>";
+  });
+
+  card.innerHTML =
+    '<div class="caso-topo">' +
+      '<span class="caso-num" data-papel="numero">Caso</span>' +
+      '<span class="caso-resumo" data-papel="resumo"></span>' +
+      '<button class="btn btn-perigo btn-pequeno" data-papel="remover-caso" type="button">Remover caso</button>' +
+    '</div>' +
+    '<div class="caso-corpo">' +
+      '<div class="grade">' +
+
+        '<div class="campo col-6">' +
+          '<label for="' + idNome + '">Nome / ID do caso de teste <span class="obrigatorio">*</span></label>' +
+          '<input class="entrada" id="' + idNome + '" data-papel="nome" type="text" ' +
+                 'placeholder="Ex.: CT-014 — Login com CPF inválido" value="' + esc(caso.nome) + '">' +
+          '<span class="mensagem-erro">Informe o nome ou o ID do caso.</span>' +
+        '</div>' +
+
+        '<div class="campo col-3">' +
+          '<label for="' + idStatus + '">Status do caso</label>' +
+          '<select class="selecao" id="' + idStatus + '" data-papel="status">' + opcoes + '</select>' +
+        '</div>' +
+
+        '<div class="campo col-12">' +
+          '<label>Evidências</label>' +
+          '<div class="zona" tabindex="0" data-papel="zona" role="button" ' +
+               'aria-label="Zona de colagem de evidências. Clique e pressione Ctrl+V.">' +
+            '<p class="zona-titulo">Clique aqui e pressione ' +
+              '<span class="zona-atalho">Ctrl</span>+<span class="zona-atalho">V</span></p>' +
+            '<p class="zona-sub">A data e a hora da colagem são carimbadas na imagem. ' +
+              'Você também pode arrastar um arquivo até aqui.</p>' +
+          '</div>' +
+          '<div class="linha-fallback">' +
+            '<button class="btn-texto" data-papel="abrir-arquivo" type="button">ou selecione um arquivo (PNG, JPG, GIF)</button>' +
+            '<input class="arquivo-oculto" data-papel="arquivo" type="file" accept="image/*" multiple>' +
+          '</div>' +
+          '<div class="evidencias" data-papel="evidencias"></div>' +
+        '</div>' +
+
+        '<div class="campo col-12">' +
+          '<label for="' + idObs + '">Observação</label>' +
+          '<textarea class="area" id="' + idObs + '" data-papel="observacao" ' +
+                    'placeholder="Passos executados, dados de massa, comportamento observado, número do bug aberto…">' +
+            esc(caso.observacao) + '</textarea>' +
+        '</div>' +
+
+      '</div>' +
+    '</div>';
+
+  /* ---- eventos dos campos de texto/seleção ---- */
+  const campoNome = card.querySelector('[data-papel="nome"]');
+  campoNome.addEventListener("input", function () {
+    caso.nome = campoNome.value;
+    campoNome.closest(".campo").classList.remove("erro");
+    agendarSalvamento();
+  });
+
+  const campoStatus = card.querySelector('[data-papel="status"]');
+  campoStatus.addEventListener("change", function () {
+    caso.status = campoStatus.value;
+    card.setAttribute("data-status", caso.status);
+    atualizarPainel();
+    agendarSalvamento();
+  });
+
+  const campoObs = card.querySelector('[data-papel="observacao"]');
+  campoObs.addEventListener("input", function () {
+    caso.observacao = campoObs.value;
+    agendarSalvamento();
+  });
+
+  card.querySelector('[data-papel="remover-caso"]').addEventListener("click", function () {
+    const rotulo = caso.nome ? '"' + caso.nome + '"' : "este caso de teste";
+    const qtd = caso.evidencias.length;
+    confirmar(
+      "Remover " + rotulo + (qtd ? " e suas " + qtd + " evidência(s)?" : "?"),
+      "Remover caso",
+      function () { removerCaso(caso.id); avisar("Caso removido.", "ok"); }
+    );
+  });
+
+  /* ---- zona de colagem ---- */
+  const zona = card.querySelector('[data-papel="zona"]');
+  zona.addEventListener("click", function () { zona.focus(); });
+  zona.addEventListener("focus", function () { zonaAtiva = caso.id; });
+  zona.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); entradaArquivo.click(); }
+  });
+  zona.addEventListener("paste", function (e) { tratarColagem(e, caso.id); });
+
+  /* ---- arrastar e soltar (atalho útil para GIFs já salvos em disco) ---- */
+  ["dragenter", "dragover"].forEach(function (evt) {
+    zona.addEventListener(evt, function (e) { e.preventDefault(); zona.classList.add("arrastando"); });
+  });
+  ["dragleave", "drop"].forEach(function (evt) {
+    zona.addEventListener(evt, function () { zona.classList.remove("arrastando"); });
+  });
+  zona.addEventListener("drop", function (e) {
+    e.preventDefault();
+    const arquivos = e.dataTransfer && e.dataTransfer.files ? Array.prototype.slice.call(e.dataTransfer.files) : [];
+    if (!arquivos.length) return;
+    arquivos.forEach(function (arq) { processarArquivo(arq, caso.id); });
+  });
+
+  /* ---- fallback: seleção manual de arquivo (GIF, imagem salva em disco) ---- */
+  const entradaArquivo = card.querySelector('[data-papel="arquivo"]');
+  card.querySelector('[data-papel="abrir-arquivo"]').addEventListener("click", function () { entradaArquivo.click(); });
+  entradaArquivo.addEventListener("change", function () {
+    const arquivos = Array.prototype.slice.call(entradaArquivo.files || []);
+    arquivos.forEach(function (arq) { processarArquivo(arq, caso.id); });
+    entradaArquivo.value = "";
+  });
+
+  renderizarEvidencias(caso, card);
+  return card;
+}
+
+/** Redesenha somente a grade de evidências de um caso. */
+function renderizarEvidencias(caso, card) {
+  const alvo = card || listaCasos.querySelector('[data-id="' + caso.id + '"]');
+  if (!alvo) return;
+  const grade = alvo.querySelector('[data-papel="evidencias"]');
+  grade.innerHTML = "";
+
+  caso.evidencias.forEach(function (ev) {
+    const item = document.createElement("div");
+    item.className = "evidencia";
+    item.innerHTML =
+      '<div class="evidencia-imagem" data-papel="ampliar">' +
+        '<img src="' + ev.base64 + '" alt="Evidência de ' + esc(caso.nome || "caso de teste") + '">' +
+        (ev.animada ? '<span class="marca-gif">GIF</span>' : "") +
+        // O carimbo já está gravado nos pixels da imagem, mas a miniatura é
+        // recortada — este selo repete a informação de forma legível na tela.
+        '<span class="evidencia-selo">📅 ' + esc(ev.carimbo) + "</span>" +
+        '<button class="evidencia-remover" data-papel="remover-evidencia" type="button" ' +
+                'title="Remover evidência" aria-label="Remover evidência">×</button>' +
+      '</div>' +
+      '<input class="evidencia-legenda" data-papel="legenda" type="text" ' +
+             'placeholder="Legenda (opcional)" value="' + esc(ev.legenda) + '">';
+
+    item.querySelector('[data-papel="ampliar"]').addEventListener("click", function (e) {
+      if (e.target.getAttribute("data-papel") === "remover-evidencia") return;
+      document.getElementById("lupaImg").src = ev.base64;
+      document.getElementById("lupa").classList.add("aberta");
+    });
+
+    item.querySelector('[data-papel="remover-evidencia"]').addEventListener("click", function () {
+      caso.evidencias = caso.evidencias.filter(function (x) { return x.id !== ev.id; });
+      renderizarEvidencias(caso);
+      atualizarPainel();
+      agendarSalvamento();
+    });
+
+    const legenda = item.querySelector('[data-papel="legenda"]');
+    legenda.addEventListener("input", function () { ev.legenda = legenda.value; agendarSalvamento(); });
+
+    grade.appendChild(item);
+  });
+
+  atualizarResumoDoCaso(caso, alvo);
+}
+
+function atualizarResumoDoCaso(caso, card) {
+  const total = caso.evidencias.length;
+  card.querySelector('[data-papel="resumo"]').textContent =
+    total === 0 ? "Sem evidências" : total === 1 ? "1 evidência" : total + " evidências";
+}
+
+/** Renumera os cards e atualiza os contadores do topo. */
+function atualizarPainel() {
+  const cards = listaCasos.querySelectorAll(".caso");
+  for (let i = 0; i < cards.length; i++) {
+    cards[i].querySelector('[data-papel="numero"]').textContent = "Caso " + (i + 1);
+  }
+  listaVazia.hidden = estado.casos.length > 0;
+
+  const r = calcularResumo();
+  let html = '<span class="selo selo-total">' + r.total + (r.total === 1 ? " caso" : " casos") + "</span>";
+  if (r.passou)     html += '<span class="selo selo-passou">' + r.passou + " passou</span>";
+  if (r.falhou)     html += '<span class="selo selo-falhou">' + r.falhou + " falhou</span>";
+  if (r.bloqueado)  html += '<span class="selo selo-bloqueado">' + r.bloqueado + " bloqueado</span>";
+  if (r.naoAplica)  html += '<span class="selo">' + r.naoAplica + " N/A</span>";
+  html += '<span class="selo">' + r.evidencias + (r.evidencias === 1 ? " evidência" : " evidências") + "</span>";
+  document.getElementById("contadores").innerHTML = html;
+}
+
+function calcularResumo() {
+  const r = { total: estado.casos.length, passou: 0, falhou: 0, bloqueado: 0, naoAplica: 0, semStatus: 0, evidencias: 0 };
+  estado.casos.forEach(function (c) {
+    r.evidencias += c.evidencias.length;
+    if (c.status === "Passou") r.passou++;
+    else if (c.status === "Falhou") r.falhou++;
+    else if (c.status === "Bloqueado") r.bloqueado++;
+    else if (c.status === "Não aplicável") r.naoAplica++;
+    else r.semStatus++;
+  });
+  return r;
+}
+
+/* ==================================================================
+   CAPTURA DE EVIDÊNCIAS (Ctrl+V, arrastar-soltar, seleção de arquivo)
+   ================================================================== */
+
+let zonaAtiva = null;  // último caso cuja zona recebeu foco — destino padrão da colagem
+
+/** Extrai apenas os arquivos de imagem de um clipboard/dataTransfer. */
+function imagensDoClipboard(dados) {
+  const encontradas = [];
+  if (!dados) return encontradas;
+  const itens = dados.items;
+  if (itens) {
+    for (let i = 0; i < itens.length; i++) {
+      if (itens[i].kind === "file" && itens[i].type.indexOf("image/") === 0) {
+        const arq = itens[i].getAsFile();
+        if (arq) encontradas.push(arq);
+      }
+    }
+  }
+  if (!encontradas.length && dados.files) {
+    for (let j = 0; j < dados.files.length; j++) {
+      if (dados.files[j].type.indexOf("image/") === 0) encontradas.push(dados.files[j]);
+    }
+  }
+  return encontradas;
+}
+
+function tratarColagem(evento, casoId) {
+  const imagens = imagensDoClipboard(evento.clipboardData || window.clipboardData);
+  if (!imagens.length) {
+    avisar("Não há imagem na área de transferência. Copie um print (Print Screen ou Win+Shift+S) e cole novamente.", "atencao", 6000);
+    return;
+  }
+  evento.preventDefault();
+  imagens.forEach(function (arq) { processarArquivo(arq, casoId); });
+}
+
+/* Rede de segurança: alguns navegadores entregam o evento de colagem no
+   documento em vez da div focada. Aqui redirecionamos para a zona certa. */
+document.addEventListener("paste", function (evento) {
+  const dentroDaZona = evento.target && evento.target.closest && evento.target.closest('[data-papel="zona"]');
+  if (dentroDaZona) return;  // já tratado pelo listener da própria zona
+
+  const imagens = imagensDoClipboard(evento.clipboardData || window.clipboardData);
+  if (!imagens.length) return;  // colagem de texto normal segue o fluxo padrão
+
+  const destino = zonaAtiva || (estado.casos.length === 1 ? estado.casos[0].id : null);
+  if (!destino) {
+    avisar("Clique na zona de evidências do caso desejado antes de colar a imagem.", "atencao", 6000);
+    return;
+  }
+  evento.preventDefault();
+  imagens.forEach(function (arq) { processarArquivo(arq, destino); });
+});
+
+/**
+ * Recebe um arquivo de imagem, aplica o carimbo de data/hora e anexa ao caso.
+ * GIFs são preservados intactos: passar pelo canvas congelaria a animação,
+ * então o carimbo deles é sobreposto por CSS na miniatura e no relatório.
+ */
+function processarArquivo(arquivo, casoId) {
+  if (!arquivo || !arquivo.type || arquivo.type.indexOf("image/") !== 0) {
+    avisar("Esse arquivo não é uma imagem. Use PNG, JPG ou GIF.", "atencao");
+    return;
+  }
+  const caso = acharCaso(casoId);
+  if (!caso) return;
+
+  const leitor = new FileReader();
+  leitor.onerror = function () { avisar("Não foi possível ler o arquivo.", "erro"); };
+  leitor.onload = function () {
+    const agora = new Date();
+    const carimbo = dataHoraCompleta(agora);
+
+    if (arquivo.type === "image/gif") {
+      anexarEvidencia(caso, leitor.result, carimbo, agora, true);
+      return;
+    }
+
+    const img = new Image();
+    img.onload = function () {
+      let base64;
+      try {
+        base64 = aplicarCarimbo(img, carimbo);
+      } catch (e) {
+        base64 = leitor.result;
+        avisar("Não foi possível carimbar a imagem; ela foi anexada sem o carimbo.", "atencao");
+      }
+      anexarEvidencia(caso, base64, carimbo, agora, false);
+    };
+    img.onerror = function () { avisar("Imagem inválida ou corrompida.", "erro"); };
+    img.src = leitor.result;
+  };
+  leitor.readAsDataURL(arquivo);
+}
+
+function anexarEvidencia(caso, base64, carimbo, quando, animada) {
+  caso.evidencias.push({
+    id: id(),
+    base64: base64,
+    legenda: "",
+    timestamp: quando.toISOString(),
+    carimbo: carimbo,
+    animada: !!animada
+  });
+  renderizarEvidencias(caso);
+  atualizarPainel();
+  agendarSalvamento();
+  avisar("Evidência adicionada — " + carimbo, "ok", 2500);
+}
+
+/**
+ * Desenha a imagem no canvas oculto e carimba data/hora no canto inferior
+ * direito. O fundo escuro semitransparente garante leitura sobre qualquer
+ * print, claro ou escuro. Imagens muito largas são reduzidas antes.
+ */
+function aplicarCarimbo(img, texto) {
+  let largura = img.naturalWidth || img.width;
+  let altura = img.naturalHeight || img.height;
+  if (!largura || !altura) throw new Error("dimensões inválidas");
+
+  if (largura > LARGURA_MAXIMA) {
+    altura = Math.round(altura * (LARGURA_MAXIMA / largura));
+    largura = LARGURA_MAXIMA;
+  }
+
+  const canvas = document.getElementById("canvasCarimbo");
+  canvas.width = largura;
+  canvas.height = altura;
+  const ctx = canvas.getContext("2d");
+
+  // Fundo branco: evita que a transparência vire preto caso o fallback JPEG entre em ação.
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, largura, altura);
+  ctx.drawImage(img, 0, 0, largura, altura);
+
+  const corpo = Math.max(13, Math.min(26, Math.round(largura * 0.02)));
+  ctx.font = "600 " + corpo + 'px "Segoe UI", Arial, sans-serif';
+  ctx.textBaseline = "middle";
+
+  const rotulo = "📅 " + texto;
+  const larguraTexto = ctx.measureText(rotulo).width;
+  const padX = Math.round(corpo * 0.7);
+  const padY = Math.round(corpo * 0.5);
+  const caixaL = larguraTexto + padX * 2;
+  const caixaA = corpo + padY * 2;
+  const margem = Math.round(corpo * 0.6);
+  const x = Math.max(margem, largura - caixaL - margem);
+  const y = Math.max(margem, altura - caixaA - margem);
+
+  ctx.fillStyle = "rgba(17,24,39,0.80)";
+  caminhoArredondado(ctx, x, y, Math.min(caixaL, largura - margem * 2), caixaA, 6);
+  ctx.fill();
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = "rgba(255,255,255,0.35)";
+  ctx.stroke();
+
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillText(rotulo, x + padX, y + caixaA / 2 + 1);
+
+  // PNG preserva o texto do print nítido; só troca para JPEG se ficar pesado demais
+  // para o autosave do navegador aguentar.
+  let saida = canvas.toDataURL("image/png");
+  if (saida.length > LIMITE_PNG) saida = canvas.toDataURL("image/jpeg", 0.86);
+  return saida;
+}
+
+function caminhoArredondado(ctx, x, y, l, a, r) {
+  ctx.beginPath();
+  if (typeof ctx.roundRect === "function") { ctx.roundRect(x, y, l, a, r); return; }
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + l - r, y);
+  ctx.quadraticCurveTo(x + l, y, x + l, y + r);
+  ctx.lineTo(x + l, y + a - r);
+  ctx.quadraticCurveTo(x + l, y + a, x + l - r, y + a);
+  ctx.lineTo(x + r, y + a);
+  ctx.quadraticCurveTo(x, y + a, x, y + a - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+/* ==================================================================
+   EXPORTAÇÃO — CSS DO RELATÓRIO
+   Este bloco é usado nos dois destinos: na área de impressão da própria
+   aplicação (Ctrl+P) e dentro do arquivo .html exportado. Só usa
+   seletores .rel-* para não vazar estilo na interface de edição.
+   ================================================================== */
+
+const CSS_RELATORIO = [
+".rel{max-width:900px;margin:0 auto;padding:34px 38px 44px;background:#fff;color:#1F2A37;",
+"font-family:'Segoe UI',Inter,system-ui,-apple-system,Roboto,Arial,sans-serif;font-size:14.5px;line-height:1.55}",
+".rel *{box-sizing:border-box}",
+".rel-topo{border-bottom:3px solid #2C6FBB;padding-bottom:18px;margin-bottom:26px}",
+".rel-etiqueta{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#2C6FBB}",
+".rel-titulo{margin:8px 0 0;font-size:26px;line-height:1.2;font-weight:700;letter-spacing:-.02em;color:#12243A}",
+".rel-geral{display:inline-block;margin-top:12px;font-size:13px;font-weight:700;padding:5px 13px;border-radius:20px;",
+"border:1px solid #CFE0F4;background:#EAF2FB;color:#22568F}",
+".rel-geral.g-aprovado{background:#E9F4EE;border-color:#BFE0CE;color:#3F7F5E}",
+".rel-geral.g-reprovado{background:#FBEDEC;border-color:#EFC9C6;color:#B4544E}",
+".rel-geral.g-parcial{background:#FBF4E4;border-color:#EBDAB0;color:#9C7621}",
+".rel-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px 26px;margin:20px 0 0}",
+".rel-meta dt{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6B7688;margin-bottom:3px}",
+".rel-meta dd{margin:0;font-size:14px;font-weight:600;color:#1F2A37;word-break:break-word}",
+".rel-resumo{background:#EAF2FB;border:1px solid #CFE0F4;border-radius:10px;padding:18px 20px;margin-bottom:28px}",
+".rel-h2{margin:0 0 12px;font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#22568F}",
+".rel-numeros{display:flex;flex-wrap:wrap;gap:10px}",
+".rel-numero{background:#fff;border:1px solid #CFE0F4;border-radius:8px;padding:9px 15px;min-width:92px}",
+".rel-numero strong{display:block;font-size:21px;line-height:1.15;font-variant-numeric:tabular-nums;color:#22568F}",
+".rel-numero span{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6B7688}",
+".rel-numero.n-passou{border-color:#BFE0CE}.rel-numero.n-passou strong{color:#3F7F5E}",
+".rel-numero.n-falhou{border-color:#EFC9C6}.rel-numero.n-falhou strong{color:#B4544E}",
+".rel-numero.n-bloqueado{border-color:#EBDAB0}.rel-numero.n-bloqueado strong{color:#9C7621}",
+".rel-numero.n-na strong{color:#6C7789}",
+".rel-caso{border:1px solid #E3EAF3;border-left:4px solid #CFE0F4;border-radius:10px;padding:18px 20px;margin-bottom:18px;",
+"break-inside:avoid;page-break-inside:avoid}",
+".rel-caso.s-passou{border-left-color:#3F7F5E}",
+".rel-caso.s-falhou{border-left-color:#B4544E}",
+".rel-caso.s-bloqueado{border-left-color:#9C7621}",
+".rel-caso.s-na{border-left-color:#6C7789}",
+".rel-caso-topo{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}",
+".rel-num{font-size:12px;font-weight:700;color:#2C6FBB;font-variant-numeric:tabular-nums}",
+".rel-caso-nome{margin:0;font-size:16px;font-weight:700;flex:1 1 220px;color:#12243A}",
+".rel-status{font-size:11.5px;font-weight:700;padding:3px 11px;border-radius:20px;border:1px solid #D9E0E9;background:#EFF2F6;color:#6C7789;white-space:nowrap}",
+".rel-status.s-passou{background:#E9F4EE;border-color:#BFE0CE;color:#3F7F5E}",
+".rel-status.s-falhou{background:#FBEDEC;border-color:#EFC9C6;color:#B4544E}",
+".rel-status.s-bloqueado{background:#FBF4E4;border-color:#EBDAB0;color:#9C7621}",
+".rel-obs{background:#F7FAFD;border:1px solid #E3EAF3;border-radius:8px;padding:11px 13px;margin:0 0 14px;font-size:13.5px;color:#4A4A4A}",
+".rel-obs b{display:block;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6B7688;margin-bottom:4px}",
+".rel-evidencias{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:14px}",
+".rel-ev{margin:0;border:1px solid #E3EAF3;border-radius:8px;overflow:hidden;background:#fff;break-inside:avoid;page-break-inside:avoid}",
+".rel-ev-img{position:relative;line-height:0;background:#F2F5F9}",
+".rel-ev-img img{width:100%;height:auto;display:block}",
+".rel-selo-img{position:absolute;right:8px;bottom:8px;background:rgba(17,24,39,.80);color:#fff;font-size:11px;font-weight:600;",
+"padding:3px 8px;border-radius:5px;border:1px solid rgba(255,255,255,.32);line-height:1.45}",
+".rel-ev figcaption{padding:9px 11px;border-top:1px solid #E3EAF3;font-size:12.5px;color:#1F2A37}",
+".rel-ev-data{display:block;font-size:11px;color:#6B7688;margin-top:3px;font-weight:500}",
+".rel-sem-ev{font-size:13px;color:#6B7688;font-style:italic;margin:0}",
+".rel-rodape{margin-top:30px;padding-top:14px;border-top:1px solid #E3EAF3;font-size:11px;color:#6B7688;",
+"display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}",
+"@page{margin:14mm}",
+"@media print{",
+"  .rel{max-width:none;margin:0;padding:0;font-size:11pt;box-shadow:none;border:0;border-radius:0}",
+"  .rel-caso,.rel-ev{break-inside:avoid;page-break-inside:avoid}",
+"  .rel-topo{break-after:avoid;page-break-after:avoid}",
+"  .rel-evidencias{grid-template-columns:1fr 1fr}",
+"  .rel-ev-img img{max-height:15cm;object-fit:contain}",
+"  .no-print{display:none !important}",
+"}"
+].join("");
+
+/* CSS aplicado somente no arquivo exportado (não entra na tela de edição). */
+const CSS_EXPORT = [
+"html,body{margin:0;padding:0;background:#F1F5FA}",
+".rel{margin:26px auto;border:1px solid #E3EAF3;border-radius:12px;box-shadow:0 1px 2px rgba(16,42,73,.05),0 8px 26px rgba(16,42,73,.07)}",
+".botao-imprimir{position:fixed;top:18px;right:18px;font-family:'Segoe UI',Arial,sans-serif;font-size:13px;font-weight:600;",
+"background:#2C6FBB;color:#fff;border:0;border-radius:6px;padding:9px 15px;cursor:pointer;box-shadow:0 4px 14px rgba(16,42,73,.2)}",
+".botao-imprimir:hover{background:#22568F}",
+"@media print{body{background:#fff}}"
+].join("");
+
+/* O mesmo CSS é injetado na página para que a área de impressão
+   (Ctrl+P / Exportar como PDF) saia idêntica ao arquivo exportado. */
+(function injetarCssDoRelatorio() {
+  const estilo = document.createElement("style");
+  estilo.textContent = CSS_RELATORIO;
+  document.head.appendChild(estilo);
+})();
+
+/* ==================================================================
+   EXPORTAÇÃO — MONTAGEM DO RELATÓRIO
+   ================================================================== */
+
+function classeStatus(status) {
+  if (status === "Passou") return "s-passou";
+  if (status === "Falhou") return "s-falhou";
+  if (status === "Bloqueado") return "s-bloqueado";
+  if (status === "Não aplicável") return "s-na";
+  return "";
+}
+
+/** Gera o HTML do relatório final (sem nenhum controle de edição). */
+function montarRelatorio() {
+  const h = estado.header;
+  const r = calcularResumo();
+  const partes = [];
+
+  partes.push('<div class="rel">');
+
+  /* --- cabeçalho --- */
+  partes.push('<header class="rel-topo">');
+  partes.push('<div class="rel-etiqueta">Evidências de execução de testes</div>');
+  partes.push('<h1 class="rel-titulo">' + esc(h.titulo || "Documento sem título") + "</h1>");
+  if (h.statusGeral) {
+    const icone = h.statusGeral === "Aprovado" ? "✅ " : h.statusGeral === "Reprovado" ? "❌ " : "⚠️ ";
+    partes.push('<div class="rel-geral g-' + h.statusGeral.toLowerCase() + '">' + icone + esc(h.statusGeral) + "</div>");
+  }
+
+  const meta = [
+    ["Executor", esc(h.executor)],
+    ["Versão / Tag", esc(h.versaoTag)],
+    ["Ambiente", esc(h.ambiente)],
+    ["Ticket / Task", esc(h.ticket)],
+    ["Início", esc(formatarDataLocal(h.dataInicio))],
+    ["Fim", esc(formatarDataLocal(h.dataFim))]
+  ].filter(function (par) { return par[1]; });
+
+  if (meta.length) {
+    partes.push('<dl class="rel-meta">');
+    meta.forEach(function (par) {
+      partes.push("<div><dt>" + par[0] + "</dt><dd>" + par[1] + "</dd></div>");
+    });
+    partes.push("</dl>");
+  }
+  partes.push("</header>");
+
+  /* --- resumo automático --- */
+  partes.push('<section class="rel-resumo"><h2 class="rel-h2">Resumo da execução</h2><div class="rel-numeros">');
+  partes.push('<div class="rel-numero"><strong>' + r.total + "</strong><span>Casos</span></div>");
+  if (r.passou)    partes.push('<div class="rel-numero n-passou"><strong>' + r.passou + "</strong><span>Passou</span></div>");
+  if (r.falhou)    partes.push('<div class="rel-numero n-falhou"><strong>' + r.falhou + "</strong><span>Falhou</span></div>");
+  if (r.bloqueado) partes.push('<div class="rel-numero n-bloqueado"><strong>' + r.bloqueado + "</strong><span>Bloqueado</span></div>");
+  if (r.naoAplica) partes.push('<div class="rel-numero n-na"><strong>' + r.naoAplica + "</strong><span>Não aplicável</span></div>");
+  if (r.semStatus) partes.push('<div class="rel-numero n-na"><strong>' + r.semStatus + "</strong><span>Sem status</span></div>");
+  partes.push('<div class="rel-numero"><strong>' + r.evidencias + "</strong><span>Evidências</span></div>");
+  partes.push("</div></section>");
+
+  /* --- casos --- */
+  partes.push('<section><h2 class="rel-h2">Casos de teste</h2>');
+  estado.casos.forEach(function (caso, indice) {
+    const cls = classeStatus(caso.status);
+    partes.push('<article class="rel-caso ' + cls + '">');
+    partes.push('<div class="rel-caso-topo">');
+    partes.push('<span class="rel-num">' + doisDigitos(indice + 1) + "</span>");
+    partes.push('<h3 class="rel-caso-nome">' + esc(caso.nome || "Caso sem nome") + "</h3>");
+    if (caso.status) partes.push('<span class="rel-status ' + cls + '">' + esc(caso.status) + "</span>");
+    partes.push("</div>");
+
+    if (caso.observacao && caso.observacao.trim()) {
+      partes.push('<p class="rel-obs"><b>Observação</b>' + escMultilinha(caso.observacao) + "</p>");
+    }
+
+    if (caso.evidencias.length) {
+      partes.push('<div class="rel-evidencias">');
+      caso.evidencias.forEach(function (ev) {
+        partes.push('<figure class="rel-ev"><div class="rel-ev-img">');
+        partes.push('<img src="' + ev.base64 + '" alt="' + esc(caso.nome || "Evidência") + '">');
+        // No GIF o carimbo não pode ser gravado no pixel (perderia a animação),
+        // então ele é sobreposto aqui, com o mesmo visual do carimbo do canvas.
+        if (ev.animada) partes.push('<span class="rel-selo-img">📅 ' + esc(ev.carimbo) + "</span>");
+        partes.push("</div><figcaption>");
+        partes.push(esc(ev.legenda || ""));
+        partes.push('<span class="rel-ev-data">📅 ' + esc(ev.carimbo || "") + "</span>");
+        partes.push("</figcaption></figure>");
+      });
+      partes.push("</div>");
+    } else {
+      partes.push('<p class="rel-sem-ev">Nenhuma evidência anexada a este caso.</p>');
+    }
+    partes.push("</article>");
+  });
+  partes.push("</section>");
+
+  partes.push('<footer class="rel-rodape"><span>Documento gerado em ' + dataHoraCompleta(new Date()) + "</span>");
+  partes.push("<span>Gerador de Evidências de Testes</span></footer>");
+  partes.push("</div>");
+
+  return partes.join("");
+}
+
+/** Empacota o relatório em um .html autocontido (CSS embutido, imagens em base64). */
+function montarArquivoFinal() {
+  const titulo = estado.header.titulo || "Evidências de teste";
+  return "<!DOCTYPE html>\n<html lang=\"pt-BR\">\n<head>\n" +
+    "<meta charset=\"UTF-8\">\n" +
+    "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n" +
+    "<title>" + esc(titulo) + "</title>\n" +
+    "<style>" + CSS_EXPORT + CSS_RELATORIO + "</style>\n" +
+    "</head>\n<body>\n" +
+    '<button class="botao-imprimir no-print" onclick="window.print()" type="button">Imprimir / Salvar em PDF</button>\n' +
+    montarRelatorio() +
+    "\n</body>\n</html>";
+}
+
+function baixarArquivo(nome, conteudo) {
+  const blob = new Blob(["\ufeff", conteudo], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = nome;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+}
+
+/* ==================================================================
+   VALIDAÇÃO
+   ================================================================== */
+
+/** Marca os campos pendentes e devolve true quando o documento pode ser gerado. */
+function documentoValido() {
+  let primeiroErro = null;
+
+  [["titulo", "fTitulo"], ["executor", "fExecutor"], ["versaoTag", "fVersao"]].forEach(function (par) {
+    const campo = document.getElementById(par[1]);
+    const vazio = !String(estado.header[par[0]] || "").trim();
+    campo.closest(".campo").classList.toggle("erro", vazio);
+    if (vazio && !primeiroErro) primeiroErro = campo;
+  });
+
+  if (!estado.casos.length) {
+    avisar("Adicione pelo menos um caso de teste antes de gerar o documento.", "erro", 6000);
+    return false;
+  }
+
+  estado.casos.forEach(function (caso) {
+    const campo = listaCasos.querySelector('[data-id="' + caso.id + '"] [data-papel="nome"]');
+    if (!campo) return;
+    const vazio = !String(caso.nome || "").trim();
+    campo.closest(".campo").classList.toggle("erro", vazio);
+    if (vazio && !primeiroErro) primeiroErro = campo;
+  });
+
+  if (primeiroErro) {
+    primeiroErro.scrollIntoView({ block: "center", behavior: "smooth" });
+    primeiroErro.focus({ preventScroll: true });
+    avisar("Preencha os campos obrigatórios destacados em vermelho.", "erro", 6000);
+    return false;
+  }
+  return true;
+}
+
+/* ==================================================================
+   AÇÕES DA BARRA SUPERIOR
+   ================================================================== */
+
+function nomeSugerido() {
+  const versao = String(estado.header.versaoTag || "sem-versao")
+    .trim().toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "sem-versao";
+  const hoje = new Date();
+  const data = hoje.getFullYear() + "-" + doisDigitos(hoje.getMonth() + 1) + "-" + doisDigitos(hoje.getDate());
+  return "evidencias_" + versao + "_" + data + ".html";
+}
+
+/** Remove caracteres que o Windows/macOS não aceitam em nome de arquivo. */
+function normalizarNomeArquivo(nome) {
+  let limpo = String(nome || "").trim().replace(/[\\/:*?"<>|]+/g, "_");
+  if (!limpo) limpo = nomeSugerido();
+  if (!/\.html?$/i.test(limpo)) limpo += ".html";
+  return limpo;
+}
+
+document.getElementById("btnGerar").addEventListener("click", function () {
+  if (!documentoValido()) return;
+  const campo = document.getElementById("fNomeArquivo");
+  campo.value = nomeSugerido();
+  abrirModal("modalExportar");
+  setTimeout(function () { campo.focus(); campo.select(); }, 50);
+});
+
+document.getElementById("btnConfirmarExport").addEventListener("click", function () {
+  const nome = normalizarNomeArquivo(document.getElementById("fNomeArquivo").value);
+  try {
+    baixarArquivo(nome, montarArquivoFinal());
+    fecharModal("modalExportar");
+    avisar("Documento gerado: " + nome + " (pasta de Downloads).", "ok", 7000);
+  } catch (e) {
+    avisar("Não foi possível gerar o arquivo. Tente remover alguma evidência muito pesada.", "erro", 8000);
+  }
+});
+
+document.getElementById("fNomeArquivo").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") document.getElementById("btnConfirmarExport").click();
+});
+
+document.getElementById("btnPdf").addEventListener("click", function () {
+  if (!documentoValido()) return;
+  // A impressão usa o mesmo relatório do arquivo exportado: o @media print
+  // esconde a interface de edição e mostra apenas esta área.
+  document.getElementById("areaImpressao").innerHTML = montarRelatorio();
+  avisar("Na janela de impressão, escolha “Salvar como PDF”.", null, 6000);
+  setTimeout(function () { window.print(); }, 250);
+});
+
+document.getElementById("btnLimpar").addEventListener("click", function () {
+  confirmar(
+    "Isso apaga o documento atual e todas as evidências salvas neste navegador. Não dá para desfazer.",
+    "Limpar tudo",
+    function () { comecarNovo(true); avisar("Documento novo, tudo limpo.", "ok"); }
+  );
+});
+
+document.getElementById("btnAddCaso").addEventListener("click", function () { adicionarCaso(null, true); });
+
+/* ==================================================================
+   MODAIS, LUPA E TECLADO
+   ================================================================== */
+
+document.querySelectorAll("[data-fechar-modal]").forEach(function (botao) {
+  botao.addEventListener("click", function () { fecharModal(botao.getAttribute("data-fechar-modal")); });
+});
+
+document.getElementById("btnConfirmarAcao").addEventListener("click", function () {
+  fecharModal("modalConfirmar");
+  if (typeof acaoConfirmada === "function") acaoConfirmada();
+  acaoConfirmada = null;
+});
+
+document.querySelectorAll(".sobreposicao").forEach(function (fundo) {
+  fundo.addEventListener("mousedown", function (e) {
+    if (e.target === fundo && fundo.id !== "modalRestaurar") fecharModal(fundo.id);
+  });
+});
+
+document.getElementById("lupa").addEventListener("click", function () {
+  this.classList.remove("aberta");
+});
+
+document.addEventListener("keydown", function (e) {
+  if (e.key !== "Escape") return;
+  document.getElementById("lupa").classList.remove("aberta");
+  ["modalExportar", "modalConfirmar"].forEach(fecharModal);
+});
+
+/* ==================================================================
+   INICIALIZAÇÃO E RESTAURAÇÃO DE SESSÃO
+   ================================================================== */
+
+/** Normaliza dados vindos do localStorage (versões antigas, campos faltando). */
+function normalizarCaso(bruto) {
+  return {
+    id: bruto.id || id(),
+    nome: bruto.nome || "",
+    status: bruto.status || "",
+    observacao: bruto.observacao || "",
+    evidencias: (bruto.evidencias || []).map(function (ev) {
+      return {
+        id: ev.id || id(),
+        base64: ev.base64 || "",
+        legenda: ev.legenda || "",
+        timestamp: ev.timestamp || "",
+        carimbo: ev.carimbo || (ev.timestamp ? dataHoraCompleta(new Date(ev.timestamp)) : ""),
+        animada: !!ev.animada
+      };
+    }).filter(function (ev) { return ev.base64; })
+  };
+}
+
+function comecarNovo(limparStorage) {
+  if (limparStorage) limparSessao();
+  estado.header = { titulo: "", executor: "", versaoTag: "", statusGeral: "", ambiente: "", dataInicio: "", dataFim: "", ticket: "" };
+  estado.casos = [];
+  listaCasos.innerHTML = "";
+  preencherHeaderNaTela();
+  adicionarCaso();
+  marcarSalvo("Pronto");
+}
+
+function restaurarSessao(pacote) {
+  const dados = pacote.dados;
+  Object.keys(estado.header).forEach(function (chave) {
+    estado.header[chave] = dados.header && dados.header[chave] ? dados.header[chave] : "";
+  });
+  estado.casos = (dados.casos || []).map(normalizarCaso);
+
+  listaCasos.innerHTML = "";
+  preencherHeaderNaTela();
+  estado.casos.forEach(function (caso) { listaCasos.appendChild(criarCardCaso(caso)); });
+  if (!estado.casos.length) adicionarCaso();
+  atualizarPainel();
+  marcarSalvo("Sessão restaurada");
+}
+
+/** Um rascunho totalmente vazio não merece a pergunta de restauração. */
+function sessaoTemConteudo(dados) {
+  const h = dados.header || {};
+  const headerPreenchido = Object.keys(h).some(function (k) { return String(h[k] || "").trim(); });
+  const casosPreenchidos = (dados.casos || []).some(function (c) {
+    return String(c.nome || "").trim() || String(c.observacao || "").trim() || (c.evidencias || []).length;
+  });
+  return headerPreenchido || casosPreenchidos;
+}
+
+function iniciar() {
+  const pacote = lerSessaoSalva();
+
+  if (pacote && sessaoTemConteudo(pacote.dados)) {
+    const casos = pacote.dados.casos.length;
+    let evidencias = 0;
+    pacote.dados.casos.forEach(function (c) { evidencias += (c.evidencias || []).length; });
+    const quando = pacote.salvoEm ? dataHoraCompleta(new Date(pacote.salvoEm)) : "data desconhecida";
+    document.getElementById("detalheSessao").textContent =
+      (pacote.dados.header && pacote.dados.header.titulo ? pacote.dados.header.titulo + " — " : "") +
+      casos + (casos === 1 ? " caso" : " casos") + ", " +
+      evidencias + (evidencias === 1 ? " evidência" : " evidências") + " · salvo em " + quando;
+
+    abrirModal("modalRestaurar");
+
+    document.getElementById("btnRestaurar").addEventListener("click", function () {
+      fecharModal("modalRestaurar");
+      restaurarSessao(pacote);
+      avisar("Sessão anterior restaurada.", "ok");
+    });
+    document.getElementById("btnNovoDoc").addEventListener("click", function () {
+      fecharModal("modalRestaurar");
+      comecarNovo(true);
+    });
+  } else {
+    comecarNovo(false);
+  }
+
+  atualizarPainel();
+}
+
+/* Se o usuário usar o Ctrl+P do navegador direto, a área de impressão precisa
+   estar preenchida — senão sairia uma página em branco. */
+window.addEventListener("beforeprint", function () {
+  document.getElementById("areaImpressao").innerHTML = montarRelatorio();
+});
+
+/* Garante a gravação mesmo se a aba for fechada dentro da janela do debounce. */
+window.addEventListener("beforeunload", function () {
+  if (temporizadorSalvar) { clearTimeout(temporizadorSalvar); salvarEstado(); }
+});
+
+iniciar();
+</script>
+</body>
+</html>
